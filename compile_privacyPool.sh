@@ -24,8 +24,8 @@ circomkit info $CIRCUITNAME
 
 # CircomKit operations
 echo "Running CircomKit operations..."
-circomkit setup $CIRCUITNAME
-snarkjs zkey export solidityverifier build/$CIRCUITNAME/groth16_pkey.zkey build/$CIRCUITNAME/verifier.sol  
+# circomkit setup $CIRCUITNAME
+# snarkjs zkey export solidityverifier build/$CIRCUITNAME/groth16_pkey.zkey build/$CIRCUITNAME/verifier.sol  
 
 for VARIABLE in 0 1 2
 do

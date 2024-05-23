@@ -187,6 +187,9 @@ describe("PrivacyPool", () => {
         let extVals = [100n, 200n, -250n]
         let feeVals = [0n, 0n, 50n]
 
+        // let extVals = [100n, 200n, -250n, 99n, -47n, -22n, -20n]
+        // let feeVals = [0n, 0n, 50n, 0n, 0n, 0n, 0n]
+
         let unspentCTX: CTX = {
             Pk: keypair.pubKey,
             amount: 0n,
