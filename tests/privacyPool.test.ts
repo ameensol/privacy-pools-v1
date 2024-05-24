@@ -1,3 +1,5 @@
+// import { WitnessTester, CircuitSignals, Circomkit, CircomkitConfig, CircuitConfig} from 'circomkit';
+import {Circomkit} from 'circomkit';
 import {account} from '@core/account'
 import {GetCommitment, GetNullifier, CTX, caclSignalHash} from '@core/account'
 import { LeanIMT } from "@zk-kit/imt"
@@ -5,8 +7,6 @@ import {ProofInputs, generateProof} from '@core/pool'
 import {FIELD_SIZE} from '@/store/variables'
 
 import { hashLeftRight, hash2, stringifyBigInts} from "maci-crypto"
-
-import { WitnessTester, CircuitSignals, Circomkit, CircomkitConfig, CircuitConfig} from 'circomkit';
 
 const fs = require("fs");
 
@@ -40,7 +40,6 @@ const circomkitConf =  {
     verbose: true,
   }
 
-
 const acc = new account();
 const keypair = acc.genKeyPair();
 const privKey = keypair.privKey.rawPrivKey
@@ -50,8 +49,6 @@ const circomkit = new Circomkit(circomkitConf as CircomkitConfig);
 const privacyPoolAddr = "0xb96BdDD5b2a794deA4Cb4020D8574A3a5c98250C" as Hex // create2 address
 const dummyAccount =  "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as Hex
 const dummFeeAccount =  "0xA9959D135F54F91b2f889be628E038cbc014Ec62" as Hex
-
-
 
 function generateProofInputs(units: bigint, feeVal: bigint, inputCTXs: CTX[]): {proofInputs: ProofInputs, outputUtxos: CTX[], expectedMerkleRoot: bigint} {
     let extVal = units - feeVal;
@@ -164,15 +161,14 @@ function generateProofInputs(units: bigint, feeVal: bigint, inputCTXs: CTX[]): {
 
     console.log("cipherTexts: ", cipherTexts)
 
-
     return {proofInputs, outputUtxos, expectedMerkleRoot};
 }
 
 
 function randomBlinder() {
     return BigInt(Math.floor(Math.random() * (Number(FIELD_SIZE) -  1)));
-  }
-  
+    // return BigInt(Math.floor(0.42 * (Number(FIELD_SIZE) -  1))); // NOT RANDOM
+}
 
 describe("PrivacyPool", () => {
     test("testing circuit", async () => {
@@ -183,9 +179,9 @@ describe("PrivacyPool", () => {
         fs.writeFileSync("circuits.json", JSON.stringify({
             "privacyPool": privacyPoolConfig
         }));
-        
-        let extVals = [100n, 200n, -250n]
-        let feeVals = [0n, 0n, 50n]
+
+        let extVals = [100n, 200n, -250n, 99n, -47n]
+        let feeVals = [0n, 0n, 50n, 0n, 0n]
 
         // let extVals = [100n, 200n, -250n, 99n, -47n, -22n, -20n]
         // let feeVals = [0n, 0n, 50n, 0n, 0n, 0n, 0n]
@@ -197,8 +193,9 @@ describe("PrivacyPool", () => {
             index: 0n,
         }
 
-        extVals.forEach((extVal, i) => {
-            const {proofInputs: proofInputs, outputUtxos: outputUtxos, expectedMerkleRoot: expectedMerkleRoot} = generateProofInputs(extVal, feeVals[i], [
+        // for (const [i, extVal] of extVals.entries()) {
+        extVals.forEach(async (extVal, i) => {
+            const {proofInputs: proofInputs, outputUtxos: outputUtxos, expectedMerkleRoot: expectedMerkleRoot, cipherTexts} = generateProofInputs(extVal, feeVals[i], [
                 unspentCTX,
                 {
                     Pk: keypair.pubKey,
@@ -211,17 +208,19 @@ describe("PrivacyPool", () => {
             unspentCTX = outputUtxos[0]
 
             console.log("proofInputs: ", stringifyBigInts(proofInputs))
+            // console.log("proofInputs: ", stringifyBigInts({ ...proofInputs, cipherTexts }))
             console.log("outputUtxos: ", outputUtxos)
 
             let fileName = `inputs/privacyPool/test_${i}.json`
             console.log("writing to file: ", fileName);
             fs.writeFileSync(fileName, JSON.stringify(stringifyBigInts(proofInputs)));
+            // fs.writeFileSync(fileName, JSON.stringify(stringifyBigInts({ ...proofInputs, cipherTexts })));
 
             if (expectedMerkleRoot > 0n) {
                 console.log("expectedRoot : ", expectedMerkleRoot)
                 circuit.expectPass(
                     {    
-                        publicVal: proofInputs.publicVal, 
+                        publicVal: proofInputs.publicVal,
                         signalHash : proofInputs.signalHash, 
                         merkleProofLength: proofInputs.merkleProofLength,
                         inputNullifier: proofInputs.inputNullifier,
@@ -265,7 +264,13 @@ describe("PrivacyPool", () => {
                 );
             }
             return 
-        })  
+        })
     });
   });
+
+  /* TODO
+  - copy the ciphertexts?
+  - prove & verify the circuit from inside the test
+  - for contract test - replace the verifier contract with the new verifier
+  */
   

@@ -10,6 +10,7 @@ CIRCUITNAME="privacyPool"
 
 echo "Compiling circuit & generating test data..."
 
+# COMMENT FOR STATIC TESTS
 rm -f circomkit.json
 rm -f circuits.json
 
@@ -19,15 +20,16 @@ rm -rf build/$CIRCUITNAME
 mkdir -p inputs/$CIRCUITNAME
 bun test privacyPool --timeout 60000
 
+# COMMENT FOR STATIC TESTS
 circomkit compile $CIRCUITNAME
 circomkit info $CIRCUITNAME
 
 # CircomKit operations
 echo "Running CircomKit operations..."
-# circomkit setup $CIRCUITNAME
-# snarkjs zkey export solidityverifier build/$CIRCUITNAME/groth16_pkey.zkey build/$CIRCUITNAME/verifier.sol  
+circomkit setup $CIRCUITNAME
+snarkjs zkey export solidityverifier build/$CIRCUITNAME/groth16_pkey.zkey build/$CIRCUITNAME/verifier.sol  
 
-for VARIABLE in 0 1 2
+for VARIABLE in 0 1 2 3 4
 do
     circomkit prove $CIRCUITNAME test_$VARIABLE
     circomkit verify $CIRCUITNAME test_$VARIABLE
