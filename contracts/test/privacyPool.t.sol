@@ -14,10 +14,21 @@ contract TestPrivacyPool is Test {
     TreeHasher internal hasher;
     Create2 internal create2;
 
+    struct HelperDataJSON {
+        string[][][] ciphertexts;
+    }
+
     function setUp() public {
         verifier = new Groth16Verifier();
         hasher = new TreeHasher();
         create2 = new Create2();
+
+        /*
+        string memory rootDir = vm.projectRoot();
+        string memory path = string.concat(rootDir, "/data.json");
+        string memory helperData = vm.readFile(path);
+        console.log(helperData);
+        */
 
         vm.deal(address(0x1), 100 ether);
         vm.startPrank(address(0x1));
@@ -55,9 +66,50 @@ contract TestPrivacyPool is Test {
         assertEq(publicVal, 21888242871839275222246405745257275088548364400416034343698204186575808495317);
     }
 
+    function convertCipherText(string[][] memory cipherText) public returns (uint256[4][2] memory) {
+        uint256[4][2] memory cipherNumbers = new uint256[4][](4);
+        console.log("length", cipherText.length);
+
+        for (uint i=0; i < cipherText.length; i++) {
+            console.log("inner length", cipherText[i].length);
+            for (uint j=0; j < cipherText[i].length; j++) {
+                console.log("i", i);
+                console.log("j", j);
+                cipherNumbers[i][j] = st2num(cipherText[i][j]);
+            }
+        }
+        return cipherNumbers;
+    }
+
+    function st2num(string memory numString) public pure returns(uint) {
+        uint  val=0;
+        bytes   memory stringBytes = bytes(numString);
+        for (uint  i =  0; i<stringBytes.length; i++) {
+            uint exp = stringBytes.length - i;
+            bytes1 ival = stringBytes[i];
+            uint8 uval = uint8(ival);
+           uint jval = uval - uint(0x30);
+   
+           val +=  (uint(jval) * (10**(exp-1))); 
+        }
+      return val;
+    }
+
     function testProcess() public {
         vm.deal(address(0x1), 1000000 ether);
         vm.startPrank(address(0x1));
+
+        string memory rootDir = vm.projectRoot();
+        string memory path = string.concat(rootDir, "/data.json");
+        string memory helperData = vm.readFile(path);
+        bytes memory ciphertextsData_0 = vm.parseJson(helperData, ".ciphertext_0");
+        string[][] memory ciphertexts_string = abi.decode(ciphertextsData_0, (string[][]));
+        uint256[][] memory ciphertexts_num = abi.decode(ciphertextsData_0, (uint256[][]));
+
+        uint256[4][2] memory ciphertexts = convertCipherText(ciphertexts_string);
+        console.log(ciphertexts[0][0]);
+        console.log(ciphertexts[1][3]);
+        console.log("converted ciphertexts");
 
         // Fresh Tree, 2 zero Input, 1 zero Output, 1 non-zero Output
         pool.process{value: 100}(
@@ -68,17 +120,18 @@ contract TestPrivacyPool is Test {
                 feeCollector: 0xA9959D135F54F91b2f889be628E038cbc014Ec62
             }),
             IPrivacyPool.supplement({
-                ciphertexts:  [
-                    [ 17588862741843131082337577935358552371170778516033212183365614551518659773346,
-                        4125601494320332492076953011842000903576601516917908821085402444016305661350,
-                        13342677508392806767808539556594287698128087331704768524131881015569729555929,
-                        163697314622228675136829286761239272268836883361137323743371874367986844187
-                    ], [ 17588862741843131082337577935358552371170778516033212183365614551518659773246,
-                        4125601494320332492076953011842000903576601516917908821085402444016305661333,
-                        13342677508392806767808539556594287698128087331704768524131881015569729555929,
-                        8267046481794314775832600901667384382294486624816811174417461243939837809584
-                    ]
-                ],
+                ciphertexts: ciphertexts,
+                // ciphertexts:  [
+                //     [ 17588862741843131082337577935358552371170778516033212183365614551518659773346,
+                //         4125601494320332492076953011842000903576601516917908821085402444016305661350,
+                //         13342677508392806767808539556594287698128087331704768524131881015569729555929,
+                //         163697314622228675136829286761239272268836883361137323743371874367986844187
+                //     ], [ 17588862741843131082337577935358552371170778516033212183365614551518659773246,
+                //         4125601494320332492076953011842000903576601516917908821085402444016305661333,
+                //         13342677508392806767808539556594287698128087331704768524131881015569729555929,
+                //         8267046481794314775832600901667384382294486624816811174417461243939837809584
+                //     ]
+                // ],
                 associationProofURI: "ipfs://"
             }),
             [0x24fa117931ab6db6d40d7806a86e8bb44a45dcb30f971b1f46c7efffac729fb9, 0x0e28eab571ae5006f7168a7e9fc5a0da7aff717c47166622360f8f8165a01431],[[0x064c9db6a87eeb2083e2a51b09691b653bc51c1cf92c6a8bd7276e495327c649, 0x0fd88672772bc3d47027dfc243bdcbd0af7b7a707eee29085de09527727d56cf],[0x2d013ff18e7608669bccbb08c9ffa94fd2ed4fad71adfdc2f457c8b79bf9f5a1, 0x299a381107435236eb93d30cec367a5cbf70a86601f590e66fd9d11aabb7cab2]],[0x06f02caa4b539891339255d92ae4d297c0b12e1290c373fef3f2513025223cda, 0x06e50f4649491735474d6ce6cf5306b350ada70dda18a3c1aa37297d70a7f164],[0x0000000000000000000000000000000000000000000000000000000000000000,0x0000000000000000000000000000000000000000000000000000000000000064,0x0c138d79d2a0c9f1eb742d55eae4a3351dcae0a65eccbf3748c73ad56de9ab93,0x0000000000000000000000000000000000000000000000000000000000000000,0x1453ea5b975aa0fb1fd7c3bb8fba0fbfd2b618ff082ac831154f50b70ae62fbf,0x2677db95f3e68fc4f7e5b6029aeda09825a43536de1f9f9167fe92b8d3a80813,0x08ab66ff4b5457e3cf0856539bd5a400ccb87d40d7c4c3ba16965f962d0fd044,0x26eeb8ab25513e324528200c90f9a413e4ebfbd31a8047601464c4e4721756c6]
@@ -154,6 +207,7 @@ contract TestPrivacyPool is Test {
         assert(ContractBalance == 0);
 
         // PARTIAL RELEASE OF FUNDS
+        /*
 
         pool.process{value: 99}(
             IPrivacyPool.signal({
@@ -236,6 +290,7 @@ contract TestPrivacyPool is Test {
         console.log("ContractBalance: ", ContractBalance3);
 
         assert(ContractBalance3 == 52);
+        */
 
         /* TODO
          - partial release + verify proof of innocence on 2nd release

@@ -50,7 +50,7 @@ const privacyPoolAddr = "0xb96BdDD5b2a794deA4Cb4020D8574A3a5c98250C" as Hex // c
 const dummyAccount =  "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as Hex
 const dummFeeAccount =  "0xA9959D135F54F91b2f889be628E038cbc014Ec62" as Hex
 
-function generateProofInputs(units: bigint, feeVal: bigint, inputCTXs: CTX[]): {proofInputs: ProofInputs, outputUtxos: CTX[], expectedMerkleRoot: bigint} {
+function generateProofInputs(units: bigint, feeVal: bigint, inputCTXs: CTX[]): {proofInputs: ProofInputs, outputUtxos: CTX[], expectedMerkleRoot: bigint, cipherTexts: any[]} {
     let extVal = units - feeVal;
     let proofInputs: ProofInputs = {
         publicVal: extVal,
@@ -161,7 +161,7 @@ function generateProofInputs(units: bigint, feeVal: bigint, inputCTXs: CTX[]): {
 
     console.log("cipherTexts: ", cipherTexts)
 
-    return {proofInputs, outputUtxos, expectedMerkleRoot};
+    return {proofInputs, outputUtxos, expectedMerkleRoot, cipherTexts};
 }
 
 
@@ -180,6 +180,11 @@ describe("PrivacyPool", () => {
             "privacyPool": privacyPoolConfig
         }));
 
+        // reset helper data
+        let helperFileName = `contracts/data.json`
+        let initHelperData = {}
+        fs.writeFileSync(helperFileName, JSON.stringify(initHelperData));
+
         let extVals = [100n, 200n, -250n, 99n, -47n]
         let feeVals = [0n, 0n, 50n, 0n, 0n]
 
@@ -193,7 +198,6 @@ describe("PrivacyPool", () => {
             index: 0n,
         }
 
-        // for (const [i, extVal] of extVals.entries()) {
         extVals.forEach(async (extVal, i) => {
             const {proofInputs: proofInputs, outputUtxos: outputUtxos, expectedMerkleRoot: expectedMerkleRoot, cipherTexts} = generateProofInputs(extVal, feeVals[i], [
                 unspentCTX,
@@ -208,13 +212,18 @@ describe("PrivacyPool", () => {
             unspentCTX = outputUtxos[0]
 
             console.log("proofInputs: ", stringifyBigInts(proofInputs))
-            // console.log("proofInputs: ", stringifyBigInts({ ...proofInputs, cipherTexts }))
             console.log("outputUtxos: ", outputUtxos)
 
             let fileName = `inputs/privacyPool/test_${i}.json`
             console.log("writing to file: ", fileName);
             fs.writeFileSync(fileName, JSON.stringify(stringifyBigInts(proofInputs)));
-            // fs.writeFileSync(fileName, JSON.stringify(stringifyBigInts({ ...proofInputs, cipherTexts })));
+
+            // save ciphertext to helper file
+            let helperData = require(helperFileName)
+            console.log("helper data", helperData)
+            // helperData.ciphertexts.push(cipherTexts)
+            helperData["ciphertext_"+i] = cipherTexts
+            fs.writeFileSync(helperFileName, JSON.stringify(helperData));
 
             if (expectedMerkleRoot > 0n) {
                 console.log("expectedRoot : ", expectedMerkleRoot)
